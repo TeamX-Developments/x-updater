@@ -76,10 +76,10 @@
         <div class="dot"></div>
         <div>
           <div class="title">Updater</div>
-          <div class="sub" id="sub">Checking for updates, because stability is a myth.</div>
+          <div class="sub" id="sub">Talking to your update server… hopefully it talks back.</div>
         </div>
       </div>
-      <div class="pill">Mode: <span id="mode">Detecting…</span></div>
+      <div class="pill">Server: <span id="serverLbl">…</span></div>
     </div>
 
     <div class="grid">
@@ -109,7 +109,7 @@
       <div class="card">
         <div class="row">
           <h3>Release Notes</h3>
-          <div class="muted" id="notesHint">from updates feed</div>
+          <div class="muted">live</div>
         </div>
         <div class="log" id="notes"></div>
       </div>
@@ -121,7 +121,6 @@
   const logEl = el("log")
   const notesEl = el("notes")
   const fillEl = el("fill")
-  const modeEl = el("mode")
   const statusPill = el("statusPill")
 
   const checkBtn = el("checkBtn")
@@ -136,6 +135,9 @@
   const qs = new URLSearchParams(location.search)
   const channel = (qs.get("channel") || "stable").toLowerCase()
   chanEl.textContent = channel
+
+  const server = qs.get("server") || "http://localhost:3300"
+  el("serverLbl").textContent = server
 
   function wlog(s){
     const t = new Date().toLocaleTimeString()
@@ -152,121 +154,147 @@
     statusPill.textContent = text
   }
 
-  function hasIPC(){
-    return !!(window.xliteUpdater && typeof window.xliteUpdater.check === "function")
+  async function post(path, body){
+    const r = await fetch(server + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {})
+    })
+    if (!r.ok) throw new Error(path + " failed: " + r.status)
+    return r.json().catch(() => ({}))
   }
 
-  function updatesURL(){
-    return new URL("v1/updates.json", location.href).toString()
+  async function push(event, data){
+    try{
+      await post("/v1/updates/report", {
+        event,
+        data: data || {},
+        ts: Date.now(),
+        page: location.href,
+        channel
+      })
+    }catch{}
+  }
+
+  function openStream(){
+    try{
+      const url = server + "/v1/updates/stream?channel=" + encodeURIComponent(channel) + "&t=" + Date.now()
+      const es = new EventSource(url)
+
+      es.addEventListener("log", (e) => {
+        const msg = safeParse(e.data)
+        if (msg && msg.text) wlog(msg.text)
+      })
+
+      es.addEventListener("progress", (e) => {
+        const msg = safeParse(e.data)
+        if (msg && typeof msg.percent === "number") setFill(msg.percent)
+      })
+
+      es.addEventListener("state", (e) => {
+        const msg = safeParse(e.data)
+        if (msg && msg.status) setStatus(msg.status)
+        if (msg && msg.latest) latVerEl.textContent = msg.latest
+        if (msg && msg.published) pubEl.textContent = msg.published
+        if (msg && msg.notes != null) notesEl.textContent = msg.notes
+        if (msg && typeof msg.updateAvailable === "boolean"){
+          downloadBtn.disabled = !msg.updateAvailable
+          installBtn.disabled = !msg.updateAvailable
+        }
+      })
+
+      es.onerror = () => {
+        wlog("Stream disconnected")
+      }
+
+      wlog("Stream connected")
+      return es
+    }catch(err){
+      wlog("Stream failed: " + (err?.message || String(err)))
+      return null
+    }
+  }
+
+  function safeParse(s){
+    try{ return JSON.parse(s) }catch{ return null }
   }
 
   async function getCurrentVersion(){
-    if (hasIPC() && typeof window.xliteUpdater.currentVersion === "function"){
-      try { return await window.xliteUpdater.currentVersion() } catch {}
-    }
     return qs.get("current") || "unknown"
   }
 
-  function pickAsset(assets){
-    const plat = (qs.get("platform") || "").toLowerCase()
-    if (plat && assets && assets[plat]) return assets[plat]
-    return (assets && (assets.win || assets.macos || assets.linux)) || null
-  }
-
   async function check(){
-    setFill(8)
+    setFill(10)
     setStatus("Checking…")
     downloadBtn.disabled = true
     installBtn.disabled = true
-    notesEl.textContent = ""
-    wlog("Starting update check")
 
     const current = await getCurrentVersion()
     curVerEl.textContent = current
 
-    if (hasIPC()){
-      modeEl.textContent = "Electron IPC"
-      wlog("Using IPC updater bridge")
-      setFill(20)
-      const res = await window.xliteUpdater.check({ channel })
-      setFill(55)
+    wlog("POST /v1/updates/check")
+    await push("ui_check_clicked", { current })
 
-      latVerEl.textContent = res.latest || "unknown"
-      pubEl.textContent = res.published || "unknown"
-      notesEl.textContent = res.notes || ""
-      setFill(75)
+    const res = await post("/v1/updates/check", { channel, current })
+    setFill(45)
 
-      if (res.updateAvailable){
-        setStatus("Update available")
-        downloadBtn.disabled = false
-        installBtn.disabled = false
-        downloadBtn.onclick = async () => {
-          wlog("Downloading via IPC…")
-          setFill(5)
-          await window.xliteUpdater.download()
-          setFill(70)
-          wlog("Download complete")
-          setFill(100)
-        }
-        installBtn.onclick = async () => {
-          wlog("Installing via IPC…")
-          await window.xliteUpdater.install()
-        }
-      } else {
-        setStatus("Up to date")
-      }
+    if (res.current) curVerEl.textContent = res.current
+    if (res.latest) latVerEl.textContent = res.latest
+    if (res.published) pubEl.textContent = res.published
+    if (res.notes != null) notesEl.textContent = res.notes
+    setStatus(res.status || (res.updateAvailable ? "Update available" : "Up to date"))
 
-      setFill(100)
-      wlog("Check finished")
-      return
-    }
-
-    modeEl.textContent = "GitHub static"
-    wlog("Using static updates feed: " + updatesURL())
-    setFill(25)
-
-    const r = await fetch(updatesURL() + "?t=" + Date.now(), { cache: "no-store" })
-    if (!r.ok) throw new Error("updates.json fetch failed: " + r.status)
-    const data = await r.json()
-    setFill(55)
-
-    const latest = (data.channels && data.channels[channel]) || data.latest
-    latVerEl.textContent = latest?.version || data.latest?.version || "unknown"
-    pubEl.textContent = latest?.published || data.latest?.published || "unknown"
-    notesEl.textContent = latest?.notes || data.latest?.notes || ""
-    setFill(75)
-
-    const asset = pickAsset(latest?.assets || data.latest?.assets)
-    const updateAvailable = (current !== "unknown" && latVerEl.textContent && current !== latVerEl.textContent)
-
-    if (updateAvailable){
-      setStatus("Update available")
-      if (asset && asset.url){
-        downloadBtn.disabled = false
-        downloadBtn.onclick = () => { location.href = asset.url }
-      } else {
-        wlog("No asset URL found in updates.json")
-      }
-      installBtn.disabled = true
-      wlog("Static mode can only download. Install happens in the OS app.")
-    } else {
-      setStatus("Up to date (or unknown)")
-    }
+    downloadBtn.disabled = !res.updateAvailable
+    installBtn.disabled = !res.updateAvailable
 
     setFill(100)
-    wlog("Check finished")
+    wlog("Check done")
+    await push("check_result", res)
+  }
+
+  async function download(){
+    setStatus("Downloading…")
+    setFill(5)
+    wlog("POST /v1/updates/download")
+    await push("ui_download_clicked", { latest: latVerEl.textContent })
+
+    const res = await post("/v1/updates/download", { channel, version: latVerEl.textContent })
+    wlog(res.message || "Download started")
+    await push("download_started", res)
+  }
+
+  async function install(){
+    setStatus("Installing…")
+    wlog("POST /v1/updates/install")
+    await push("ui_install_clicked", { latest: latVerEl.textContent })
+
+    const res = await post("/v1/updates/install", { channel, version: latVerEl.textContent })
+    wlog(res.message || "Install started")
+    await push("install_started", res)
   }
 
   checkBtn.onclick = () => check().catch(e => {
     setStatus("Failed")
     setFill(100)
-    wlog(String(e && e.message ? e.message : e))
+    wlog(e?.message || String(e))
+    push("check_failed", { error: e?.message || String(e) })
   })
 
-  check().catch(e => {
+  downloadBtn.onclick = () => download().catch(e => {
     setStatus("Failed")
-    wlog(String(e && e.message ? e.message : e))
+    wlog(e?.message || String(e))
+    push("download_failed", { error: e?.message || String(e) })
   })
+
+  installBtn.onclick = () => install().catch(e => {
+    setStatus("Failed")
+    wlog(e?.message || String(e))
+    push("install_failed", { error: e?.message || String(e) })
+  })
+
+  push("page_loaded", { ua: navigator.userAgent }).catch(()=>{})
+  openStream()
+  check().catch(e => { wlog(e?.message || String(e)) })
 </script>
 </body>
 </html>
