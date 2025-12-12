@@ -2,72 +2,271 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="./css/x-update.css" rel="stylesheet">
-  <meta name="color-scheme" content="light dark" />
-  <title>Updates</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Updater</title>
+
+  <link rel="stylesheet" href="./css/x-main.css">
+  <link rel="stylesheet" href="./css/x-forms.css">
+
+  <style>
+    :root{--bd:rgba(255,255,255,.12);--card:rgba(255,255,255,.06)}
+    body{
+      min-height:100vh;margin:0;color:rgba(255,255,255,.92);overflow:hidden;
+      background:
+        radial-gradient(1200px 800px at 15% 20%, rgba(125,211,252,.18), transparent 55%),
+        radial-gradient(900px 700px at 80% 70%, rgba(167,139,250,.16), transparent 55%),
+        linear-gradient(180deg, #0b1020 0%, #070a12 100%);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:26px}
+    .top{
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding:18px;border:1px solid var(--bd);background:linear-gradient(180deg,var(--card),rgba(255,255,255,.03));
+      border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.35);backdrop-filter:blur(10px)
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .dot{
+      width:12px;height:12px;border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.2) 35%, rgba(255,255,255,0) 70%),
+                  linear-gradient(180deg, rgba(99,102,241,1), rgba(34,197,94,1));
+      box-shadow:0 0 18px rgba(99,102,241,.55),0 0 22px rgba(34,197,94,.25)
+    }
+    .title{font-size:18px;font-weight:800}
+    .sub{font-size:12px;opacity:.75;margin-top:2px}
+    .pill{
+      padding:6px 10px;border-radius:999px;border:1px solid var(--bd);
+      background:rgba(255,255,255,.05);font-size:12px;display:inline-flex;gap:8px;align-items:center
+    }
+    .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-top:16px}
+    .card{
+      border:1px solid var(--bd);background:linear-gradient(180deg,var(--card),rgba(255,255,255,.03));
+      border-radius:18px;padding:16px;box-shadow:0 20px 50px rgba(0,0,0,.28);backdrop-filter:blur(10px)
+    }
+    h3{margin:0;font-size:14px;opacity:.9}
+    .muted{opacity:.72;font-size:12px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .meta{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .k{border:1px solid var(--bd);background:rgba(255,255,255,.04);border-radius:14px;padding:10px;min-height:56px}
+    .lbl{font-size:11px;opacity:.7}
+    .val{margin-top:5px;font-size:13px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{
+      border:1px solid var(--bd);background:rgba(255,255,255,.06);color:rgba(255,255,255,.92);
+      padding:10px 12px;border-radius:12px;font-weight:700;cursor:pointer;
+      transition:transform .08s ease,background .2s ease,border-color .2s ease,opacity .2s ease
+    }
+    button:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.2)}
+    button:active{transform:translateY(1px)}
+    button.primary{background:linear-gradient(180deg, rgba(99,102,241,.45), rgba(34,197,94,.18));border-color:rgba(99,102,241,.55)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .bar{margin-top:12px;border:1px solid var(--bd);background:rgba(0,0,0,.18);border-radius:999px;height:12px;overflow:hidden}
+    .fill{height:100%;width:0%;background:linear-gradient(90deg, rgba(99,102,241,1), rgba(34,197,94,1));border-radius:999px;transition:width .25s ease}
+    .log{
+      margin-top:12px;border:1px solid var(--bd);background:rgba(0,0,0,.18);border-radius:14px;padding:12px;
+      height:250px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12px;line-height:1.45;white-space:pre-wrap
+    }
+    @media (max-width:860px){.grid{grid-template-columns:1fr}.meta{grid-template-columns:1fr}}
+  </style>
 </head>
-
 <body>
-  <main class="wrap">
-    <header class="top">
+  <div class="wrap">
+    <div class="top">
       <div class="brand">
-        <span class="dot" aria-hidden="true"></span>
+        <div class="dot"></div>
         <div>
-          <div style="font-size:16px;">Updates</div>
-          <div class="mono" id="apiLine">API: (not set yet)</div>
+          <div class="title">Updater</div>
+          <div class="sub" id="sub">Checking for updates, because stability is a myth.</div>
         </div>
       </div>
+      <div class="pill">Mode: <span id="mode">Detecting…</span></div>
+    </div>
 
-      <div class="controls">
-        <span class="pill">
-          <span class="statusDot" id="statusDot" aria-hidden="true"></span>
-          <span id="statusText">Loading…</span>
-        </span>
-        <button class="btn" id="refreshBtn" type="button">Refresh</button>
+    <div class="grid">
+      <div class="card">
+        <div class="row">
+          <h3>Update Status</h3>
+          <div class="pill" id="statusPill">…</div>
+        </div>
+
+        <div class="meta">
+          <div class="k"><div class="lbl">Current</div><div class="val" id="curVer">unknown</div></div>
+          <div class="k"><div class="lbl">Latest</div><div class="val" id="latVer">…</div></div>
+          <div class="k"><div class="lbl">Published</div><div class="val" id="pub">…</div></div>
+          <div class="k"><div class="lbl">Channel</div><div class="val" id="chan">stable</div></div>
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="checkBtn">Check</button>
+          <button id="downloadBtn" disabled>Download</button>
+          <button id="installBtn" disabled>Install</button>
+        </div>
+
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <div class="log" id="log"></div>
       </div>
-    </header>
 
-    <section class="grid">
-      <section class="card" aria-label="Updates list">
-        <h2>Latest updates</h2>
-        <div class="body">
-          <input class="search" id="search" placeholder="Search updates…" />
-          <div style="height:12px;"></div>
-          <div class="list" id="list">
-            <div class="skeleton"></div>
-            <div class="skeleton"></div>
-            <div class="skeleton"></div>
-          </div>
-          <div style="height:12px;"></div>
-          <div class="note" id="note"></div>
+      <div class="card">
+        <div class="row">
+          <h3>Release Notes</h3>
+          <div class="muted" id="notesHint">from updates feed</div>
         </div>
-      </section>
+        <div class="log" id="notes"></div>
+      </div>
+    </div>
+  </div>
 
-      <aside class="card" aria-label="Service stats">
-        <h2>Service</h2>
-        <div class="body">
-          <div class="mono" id="statsBox">Fetching stats…</div>
-          <div style="height:14px;"></div>
-          <div class="note">
-            This page expects your API to expose:
-            <span class="mono">GET /v1/updates</span> and optionally
-            <span class="mono">GET /v1/stats</span>.
-          </div>
-          <div style="height:14px;"></div>
-          <div class="note">
-            If your API is on a different domain than GitHub Pages, you need CORS.
-          </div>
-        </div>
-      </aside>
-    </section>
-  </main>
+<script>
+  const el = (id) => document.getElementById(id)
+  const logEl = el("log")
+  const notesEl = el("notes")
+  const fillEl = el("fill")
+  const modeEl = el("mode")
+  const statusPill = el("statusPill")
 
-  <script src="./js/x-update.js">
-    // Change this to your API base (no trailing slash). Examples:
-    //   const API_BASE = "http://127.0.0.1:5173";
-    //   const API_BASE = "https://api.yoursite.com";
-   
-  </script>
+  const checkBtn = el("checkBtn")
+  const downloadBtn = el("downloadBtn")
+  const installBtn = el("installBtn")
+
+  const curVerEl = el("curVer")
+  const latVerEl = el("latVer")
+  const pubEl = el("pub")
+  const chanEl = el("chan")
+
+  const qs = new URLSearchParams(location.search)
+  const channel = (qs.get("channel") || "stable").toLowerCase()
+  chanEl.textContent = channel
+
+  function wlog(s){
+    const t = new Date().toLocaleTimeString()
+    logEl.textContent += `[${t}] ${s}\n`
+    logEl.scrollTop = logEl.scrollHeight
+  }
+
+  function setFill(p){
+    const v = Math.max(0, Math.min(100, Number(p) || 0))
+    fillEl.style.width = v + "%"
+  }
+
+  function setStatus(text){
+    statusPill.textContent = text
+  }
+
+  function hasIPC(){
+    return !!(window.xliteUpdater && typeof window.xliteUpdater.check === "function")
+  }
+
+  function updatesURL(){
+    return new URL("v1/updates.json", location.href).toString()
+  }
+
+  async function getCurrentVersion(){
+    if (hasIPC() && typeof window.xliteUpdater.currentVersion === "function"){
+      try { return await window.xliteUpdater.currentVersion() } catch {}
+    }
+    return qs.get("current") || "unknown"
+  }
+
+  function pickAsset(assets){
+    const plat = (qs.get("platform") || "").toLowerCase()
+    if (plat && assets && assets[plat]) return assets[plat]
+    return (assets && (assets.win || assets.macos || assets.linux)) || null
+  }
+
+  async function check(){
+    setFill(8)
+    setStatus("Checking…")
+    downloadBtn.disabled = true
+    installBtn.disabled = true
+    notesEl.textContent = ""
+    wlog("Starting update check")
+
+    const current = await getCurrentVersion()
+    curVerEl.textContent = current
+
+    if (hasIPC()){
+      modeEl.textContent = "Electron IPC"
+      wlog("Using IPC updater bridge")
+      setFill(20)
+      const res = await window.xliteUpdater.check({ channel })
+      setFill(55)
+
+      latVerEl.textContent = res.latest || "unknown"
+      pubEl.textContent = res.published || "unknown"
+      notesEl.textContent = res.notes || ""
+      setFill(75)
+
+      if (res.updateAvailable){
+        setStatus("Update available")
+        downloadBtn.disabled = false
+        installBtn.disabled = false
+        downloadBtn.onclick = async () => {
+          wlog("Downloading via IPC…")
+          setFill(5)
+          await window.xliteUpdater.download()
+          setFill(70)
+          wlog("Download complete")
+          setFill(100)
+        }
+        installBtn.onclick = async () => {
+          wlog("Installing via IPC…")
+          await window.xliteUpdater.install()
+        }
+      } else {
+        setStatus("Up to date")
+      }
+
+      setFill(100)
+      wlog("Check finished")
+      return
+    }
+
+    modeEl.textContent = "GitHub static"
+    wlog("Using static updates feed: " + updatesURL())
+    setFill(25)
+
+    const r = await fetch(updatesURL() + "?t=" + Date.now(), { cache: "no-store" })
+    if (!r.ok) throw new Error("updates.json fetch failed: " + r.status)
+    const data = await r.json()
+    setFill(55)
+
+    const latest = (data.channels && data.channels[channel]) || data.latest
+    latVerEl.textContent = latest?.version || data.latest?.version || "unknown"
+    pubEl.textContent = latest?.published || data.latest?.published || "unknown"
+    notesEl.textContent = latest?.notes || data.latest?.notes || ""
+    setFill(75)
+
+    const asset = pickAsset(latest?.assets || data.latest?.assets)
+    const updateAvailable = (current !== "unknown" && latVerEl.textContent && current !== latVerEl.textContent)
+
+    if (updateAvailable){
+      setStatus("Update available")
+      if (asset && asset.url){
+        downloadBtn.disabled = false
+        downloadBtn.onclick = () => { location.href = asset.url }
+      } else {
+        wlog("No asset URL found in updates.json")
+      }
+      installBtn.disabled = true
+      wlog("Static mode can only download. Install happens in the OS app.")
+    } else {
+      setStatus("Up to date (or unknown)")
+    }
+
+    setFill(100)
+    wlog("Check finished")
+  }
+
+  checkBtn.onclick = () => check().catch(e => {
+    setStatus("Failed")
+    setFill(100)
+    wlog(String(e && e.message ? e.message : e))
+  })
+
+  check().catch(e => {
+    setStatus("Failed")
+    wlog(String(e && e.message ? e.message : e))
+  })
+</script>
 </body>
 </html>
