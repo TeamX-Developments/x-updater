@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Updates</title>
+</head>
+
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div class="brand">
+        <span class="dot" aria-hidden="true"></span>
+        <div>
+          <div style="font-size:16px;">Updates</div>
+          <div class="mono" id="apiLine">API: (not set yet)</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <span class="pill">
+          <span class="statusDot" id="statusDot" aria-hidden="true"></span>
+          <span id="statusText">Loading…</span>
+        </span>
+        <button class="btn" id="refreshBtn" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <section class="grid">
+      <section class="card" aria-label="Updates list">
+        <h2>Latest updates</h2>
+        <div class="body">
+          <input class="search" id="search" placeholder="Search updates…" />
+          <div style="height:12px;"></div>
+          <div class="list" id="list">
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+          </div>
+          <div style="height:12px;"></div>
+          <div class="note" id="note"></div>
+        </div>
+      </section>
+
+      <aside class="card" aria-label="Service stats">
+        <h2>Service</h2>
+        <div class="body">
+          <div class="mono" id="statsBox">Fetching stats…</div>
+          <div style="height:14px;"></div>
+          <div class="note">
+            This page expects your API to expose:
+            <span class="mono">GET /v1/updates</span> and optionally
+            <span class="mono">GET /v1/stats</span>.
+          </div>
+          <div style="height:14px;"></div>
+          <div class="note">
+            If your API is on a different domain than GitHub Pages, you need CORS.
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="./js/x-update.js">
+    // Change this to your API base (no trailing slash). Examples:
+    //   const API_BASE = "http://127.0.0.1:5173";
+    //   const API_BASE = "https://api.yoursite.com";
+   
+  </script>
+</body>
+</html>
