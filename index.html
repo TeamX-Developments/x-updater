@@ -4,77 +4,91 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Project X Updater</title>
-
-  <link rel="stylesheet" href="./css/x-main.css">
-  <link rel="stylesheet" href="./css/x-forms.css">
-
   <style>
-    :root{--bd:rgba(255,255,255,.12);--card:rgba(255,255,255,.06)}
+    :root{
+      --bg1:#0b1020; --bg2:#070a12;
+      --txt:rgba(255,255,255,.92);
+      --mut:rgba(255,255,255,.72);
+      --bd:rgba(255,255,255,.14);
+      --card:rgba(255,255,255,.07);
+      --card2:rgba(255,255,255,.04);
+      --ok:#22c55e; --bad:#ef4444; --warn:#f59e0b;
+      --p1:#6366f1; --p2:#22c55e;
+    }
+    *{box-sizing:border-box}
     body{
-      min-height:100vh;margin:0;color:rgba(255,255,255,.92);overflow:hidden;
+      margin:0; min-height:100vh; color:var(--txt); overflow:hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
       background:
         radial-gradient(1200px 800px at 15% 20%, rgba(125,211,252,.18), transparent 55%),
         radial-gradient(900px 700px at 80% 70%, rgba(167,139,250,.16), transparent 55%),
-        linear-gradient(180deg, #0b1020 0%, #070a12 100%);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+        linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
     }
+    code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
     .wrap{max-width:1100px;margin:0 auto;padding:26px}
     .top{
-      display:flex;align-items:center;justify-content:space-between;gap:14px;
-      padding:18px;border:1px solid var(--bd);background:linear-gradient(180deg,var(--card),rgba(255,255,255,.03));
+      display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+      padding:18px;border:1px solid var(--bd);
+      background:linear-gradient(180deg,var(--card),var(--card2));
       border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.35);backdrop-filter:blur(10px)
     }
     .brand{display:flex;align-items:center;gap:12px}
     .dot{
       width:12px;height:12px;border-radius:50%;
-      background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.2) 35%, rgba(255,255,255,0) 70%),
-                  linear-gradient(180deg, rgba(99,102,241,1), rgba(34,197,94,1));
+      background:
+        radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.2) 35%, rgba(255,255,255,0) 70%),
+        linear-gradient(180deg, rgba(99,102,241,1), rgba(34,197,94,1));
       box-shadow:0 0 18px rgba(99,102,241,.55),0 0 22px rgba(34,197,94,.25)
     }
-    .title{font-size:18px;font-weight:800}
-    .sub{font-size:12px;opacity:.75;margin-top:2px}
+    .title{font-size:18px;font-weight:900;letter-spacing:.2px}
+    .sub{font-size:12px;color:var(--mut);margin-top:2px;line-height:1.35}
     .pill{
       padding:6px 10px;border-radius:999px;border:1px solid var(--bd);
       background:rgba(255,255,255,.05);font-size:12px;display:inline-flex;gap:8px;align-items:center
     }
     .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-top:16px}
     .card{
-      border:1px solid var(--bd);background:linear-gradient(180deg,var(--card),rgba(255,255,255,.03));
+      border:1px solid var(--bd);
+      background:linear-gradient(180deg,var(--card),var(--card2));
       border-radius:18px;padding:16px;box-shadow:0 20px 50px rgba(0,0,0,.28);backdrop-filter:blur(10px)
     }
-    h3{margin:0;font-size:14px;opacity:.9}
-    .muted{opacity:.72;font-size:12px}
-    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .meta{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .k{border:1px solid var(--bd);background:rgba(255,255,255,.04);border-radius:14px;padding:10px;min-height:56px}
-    .lbl{font-size:11px;opacity:.7}
-    .val{margin-top:5px;font-size:13px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    button{
-      border:1px solid var(--bd);background:rgba(255,255,255,.06);color:rgba(255,255,255,.92);
-      padding:10px 12px;border-radius:12px;font-weight:700;cursor:pointer;
-      transition:transform .08s ease,background .2s ease,border-color .2s ease,opacity .2s ease
-    }
-    button:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.2)}
-    button:active{transform:translateY(1px)}
-    button.primary{background:linear-gradient(180deg, rgba(99,102,241,.45), rgba(34,197,94,.18));border-color:rgba(99,102,241,.55)}
-    button:disabled{opacity:.45;cursor:not-allowed}
-
-    .bar{margin-top:12px;border:1px solid var(--bd);background:rgba(0,0,0,.18);border-radius:999px;height:12px;overflow:hidden}
-    .fill{height:100%;width:0%;background:linear-gradient(90deg, rgba(99,102,241,1), rgba(34,197,94,1));border-radius:999px;transition:width .25s ease}
-    .log{
-      margin-top:12px;border:1px solid var(--bd);background:rgba(0,0,0,.18);border-radius:14px;padding:12px;
-      height:250px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:12px;line-height:1.45;white-space:pre-wrap
-    }
-    .minirow{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    h3{margin:0;font-size:14px;opacity:.95;font-weight:950}
+    .muted{color:var(--mut);font-size:12px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .minirow{display:grid;grid-template-columns:1.2fr .7fr .7fr .7fr;gap:10px;margin-top:12px}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr}.minirow{grid-template-columns:1fr 1fr}.wrap{padding:18px}}
+    @media (max-width: 620px){.minirow{grid-template-columns:1fr}}
+    label{font-size:11px;color:var(--mut);display:block;margin-bottom:6px}
     input{
       width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--bd);
-      background:rgba(255,255,255,.05);color:rgba(255,255,255,.92);outline:none
+      background:rgba(255,255,255,.05);color:var(--txt);outline:none
     }
-    label{font-size:11px;opacity:.7}
-    @media (max-width:860px){.grid{grid-template-columns:1fr}.meta{grid-template-columns:1fr}}
+    input:focus{border-color:rgba(99,102,241,.7);box-shadow:0 0 0 3px rgba(99,102,241,.18)}
+    .meta{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .k{border:1px solid var(--bd);background:rgba(255,255,255,.04);border-radius:14px;padding:10px;min-height:56px}
+    .lbl{font-size:11px;color:var(--mut)}
+    .val{margin-top:5px;font-size:13px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{
+      border:1px solid var(--bd);background:rgba(255,255,255,.06);color:var(--txt);
+      padding:10px 12px;border-radius:12px;font-weight:900;cursor:pointer;
+      transition:transform .08s ease,background .2s ease,border-color .2s ease,opacity .2s ease
+    }
+    button:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.22)}
+    button:active{transform:translateY(1px)}
+    button.primary{background:linear-gradient(180deg, rgba(99,102,241,.45), rgba(34,197,94,.18));border-color:rgba(99,102,241,.55)}
+    button.danger{background:linear-gradient(180deg, rgba(239,68,68,.28), rgba(0,0,0,.02));border-color:rgba(239,68,68,.35)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .bar{margin-top:12px;border:1px solid var(--bd);background:rgba(0,0,0,.18);border-radius:999px;height:12px;overflow:hidden}
+    .fill{height:100%;width:0%;background:linear-gradient(90deg, var(--p1), var(--p2));border-radius:999px;transition:width .25s ease}
+    .log{
+      margin-top:12px;border:1px solid var(--bd);background:rgba(0,0,0,.18);border-radius:14px;padding:12px;
+      height:250px;overflow:auto;font-size:12px;line-height:1.45;white-space:pre-wrap
+    }
+    .dot2{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.25)}
+    .dot2.ok{background:var(--ok)}
+    .dot2.bad{background:var(--bad)}
+    .dot2.warn{background:var(--warn)}
   </style>
 </head>
 <body>
@@ -84,10 +98,13 @@
         <div class="dot"></div>
         <div>
           <div class="title">Project X Updater</div>
-          <div class="sub" id="sub">Uses <code>/v2/updates/check</code> and <code>/v2/updates/install</code>. No fake endpoints.</div>
+          <div class="sub">
+            Uses <code>/v2/updates/check</code> + <code>/v2/updates/install</code> on <code>localhost:8787</code>.
+            If it fails, it’s usually because the server isn’t running. Shocking.
+          </div>
         </div>
       </div>
-      <div class="pill">Server: <span id="serverLbl">…</span></div>
+      <div class="pill"><span class="dot2 warn" id="srvDot"></span> <span id="serverLbl">…</span></div>
     </div>
 
     <div class="grid">
@@ -98,20 +115,20 @@
         </div>
 
         <div class="minirow">
-          <div style="flex:1;min-width:220px">
-            <label>Server (updates)</label>
+          <div>
+            <label>Updates server</label>
             <input id="serverInput" placeholder="http://localhost:8787" />
           </div>
-          <div style="flex:1;min-width:180px">
+          <div>
             <label>Channel</label>
             <input id="channelInput" placeholder="stable" />
           </div>
-          <div style="flex:1;min-width:180px">
+          <div>
             <label>Current version</label>
             <input id="currentInput" placeholder="1.0.0" />
           </div>
-          <div style="flex:1;min-width:180px">
-            <label>Install dest (folder name)</label>
+          <div>
+            <label>Install destination</label>
             <input id="destInput" placeholder="current" />
           </div>
         </div>
@@ -127,7 +144,7 @@
           <button class="primary" id="pingBtn">Ping</button>
           <button class="primary" id="checkBtn">Check</button>
           <button id="installBtn" disabled>Install</button>
-          <button id="wipeInstallBtn" disabled>Wipe + Install</button>
+          <button class="danger" id="wipeInstallBtn" disabled>Wipe + Install</button>
         </div>
 
         <div class="bar"><div class="fill" id="fill"></div></div>
@@ -137,7 +154,7 @@
       <div class="card">
         <div class="row">
           <h3>Release Notes</h3>
-          <div class="muted" id="notesLbl">live</div>
+          <div class="muted" id="notesLbl">from server</div>
         </div>
         <div class="log" id="notes"></div>
       </div>
@@ -163,6 +180,8 @@
   const availEl = el("avail");
 
   const serverLbl = el("serverLbl");
+  const srvDot = el("srvDot");
+
   const serverInput = el("serverInput");
   const channelInput = el("channelInput");
   const currentInput = el("currentInput");
@@ -185,8 +204,17 @@
     statusPill.textContent = text;
   }
 
+  function setServerState(state){
+    srvDot.classList.remove("ok","bad","warn");
+    srvDot.classList.add(state);
+  }
+
+  function normBase(s){
+    return String(s || "").trim().replace(/\/+$/, "");
+  }
+
   function getCfg(){
-    const server = (serverInput.value || "").trim().replace(/\/+$/, "");
+    const server = normBase(serverInput.value) || "http://localhost:8787";
     const channel = (channelInput.value || "").trim().toLowerCase() || "stable";
     const current = (currentInput.value || "").trim() || "unknown";
     const dest = (destInput.value || "").trim() || "current";
@@ -213,11 +241,14 @@
   async function ping(){
     const { server } = getCfg();
     setStatus("Pinging…");
-    setFill(15);
+    setFill(12);
 
-    wlog(`GET ${server}/health`);
-    const data = await fetchJson(server + "/health");
+    const url = server + "/health";
+    wlog("GET " + url);
 
+    const data = await fetchJson(url);
+
+    setServerState("ok");
     setFill(100);
     setStatus("Online");
     wlog(`OK: ${data.service} @ ${data.port}`);
@@ -256,10 +287,9 @@
     setStatus(wipe ? "Wipe + Installing…" : "Installing…");
     setFill(15);
 
-    const url =
-      `${server}/v2/updates/install?channel=${encodeURIComponent(channel)}&dest=${encodeURIComponent(dest)}&wipe=${wipe ? "1" : "0"}`;
-
+    const url = `${server}/v2/updates/install?channel=${encodeURIComponent(channel)}&dest=${encodeURIComponent(dest)}&wipe=${wipe ? "1" : "0"}`;
     wlog("GET " + url);
+
     const res = await fetchJson(url);
 
     setFill(100);
@@ -274,6 +304,43 @@
     return res;
   }
 
+  function fail(msg){
+    setServerState("bad");
+    setStatus("Offline / Failed");
+    setFill(100);
+    wlog(msg);
+  }
+
   // Defaults
-  const defaultServer = (qs.get("server") || "http://localhost:8787").replace(/\/+$/, "");
-  const defaultChannel = (qs.get("channel
+  serverInput.value = normBase(qs.get("server") || "http://localhost:8787");
+  channelInput.value = (qs.get("channel") || "stable").toLowerCase();
+  currentInput.value = qs.get("current") || "unknown";
+  destInput.value = qs.get("dest") || "current";
+
+  function syncServerLabel(){
+    const base = normBase(serverInput.value) || "—";
+    serverLbl.textContent = base;
+  }
+  syncServerLabel();
+  serverInput.addEventListener("input", syncServerLabel);
+
+  // Wire buttons
+  pingBtn.onclick = () => ping().catch(e => fail(e?.message || String(e)));
+  checkBtn.onclick = () => check().catch(e => { setStatus("Failed"); setFill(100); wlog(e?.message || String(e)); });
+  installBtn.onclick = () => install(false).catch(e => { setStatus("Failed"); setFill(100); wlog(e?.message || String(e)); });
+  wipeInstallBtn.onclick = () => install(true).catch(e => { setStatus("Failed"); setFill(100); wlog(e?.message || String(e)); });
+
+  // Auto-run
+  (async () => {
+    wlog("Updater loaded.");
+    setServerState("warn");
+    try {
+      await ping();
+      await check();
+    } catch (e) {
+      fail(e?.message || String(e));
+    }
+  })();
+</script>
+</body>
+</html>
