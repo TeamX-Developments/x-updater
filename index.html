@@ -263,7 +263,9 @@
 
     curVerEl.textContent = current;
 
-    const url = `${server}/v2/updates/check?channel=${encodeURIComponent(channel)}&current=${encodeURIComponent(current)}`;
+  const url =
+  `${server}/v2/updates/install?channel=${encodeURIComponent(channel)}&dest=${encodeURIComponent(dest)}&wipe=${wipe ? "1" : "0"}&apply=1&target=app`;
+
     wlog("GET " + url);
 
     const res = await fetchJson(url);
