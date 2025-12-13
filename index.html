@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Updater</title>
+  <title>Project X Updater</title>
 
   <link rel="stylesheet" href="./css/x-main.css">
   <link rel="stylesheet" href="./css/x-forms.css">
@@ -49,6 +49,7 @@
     .k{border:1px solid var(--bd);background:rgba(255,255,255,.04);border-radius:14px;padding:10px;min-height:56px}
     .lbl{font-size:11px;opacity:.7}
     .val{margin-top:5px;font-size:13px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
     button{
       border:1px solid var(--bd);background:rgba(255,255,255,.06);color:rgba(255,255,255,.92);
@@ -59,6 +60,7 @@
     button:active{transform:translateY(1px)}
     button.primary{background:linear-gradient(180deg, rgba(99,102,241,.45), rgba(34,197,94,.18));border-color:rgba(99,102,241,.55)}
     button:disabled{opacity:.45;cursor:not-allowed}
+
     .bar{margin-top:12px;border:1px solid var(--bd);background:rgba(0,0,0,.18);border-radius:999px;height:12px;overflow:hidden}
     .fill{height:100%;width:0%;background:linear-gradient(90deg, rgba(99,102,241,1), rgba(34,197,94,1));border-radius:999px;transition:width .25s ease}
     .log{
@@ -66,6 +68,12 @@
       height:250px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size:12px;line-height:1.45;white-space:pre-wrap
     }
+    .minirow{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    input{
+      width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--bd);
+      background:rgba(255,255,255,.05);color:rgba(255,255,255,.92);outline:none
+    }
+    label{font-size:11px;opacity:.7}
     @media (max-width:860px){.grid{grid-template-columns:1fr}.meta{grid-template-columns:1fr}}
   </style>
 </head>
@@ -75,8 +83,8 @@
       <div class="brand">
         <div class="dot"></div>
         <div>
-          <div class="title">Updater</div>
-          <div class="sub" id="sub">Talking to your update server… hopefully it talks back.</div>
+          <div class="title">Project X Updater</div>
+          <div class="sub" id="sub">Uses <code>/v2/updates/check</code> and <code>/v2/updates/install</code>. No fake endpoints.</div>
         </div>
       </div>
       <div class="pill">Server: <span id="serverLbl">…</span></div>
@@ -86,20 +94,40 @@
       <div class="card">
         <div class="row">
           <h3>Update Status</h3>
-          <div class="pill" id="statusPill">…</div>
+          <div class="pill" id="statusPill">starting…</div>
+        </div>
+
+        <div class="minirow">
+          <div style="flex:1;min-width:220px">
+            <label>Server (updates)</label>
+            <input id="serverInput" placeholder="http://localhost:8787" />
+          </div>
+          <div style="flex:1;min-width:180px">
+            <label>Channel</label>
+            <input id="channelInput" placeholder="stable" />
+          </div>
+          <div style="flex:1;min-width:180px">
+            <label>Current version</label>
+            <input id="currentInput" placeholder="1.0.0" />
+          </div>
+          <div style="flex:1;min-width:180px">
+            <label>Install dest (folder name)</label>
+            <input id="destInput" placeholder="current" />
+          </div>
         </div>
 
         <div class="meta">
-          <div class="k"><div class="lbl">Current</div><div class="val" id="curVer">unknown</div></div>
-          <div class="k"><div class="lbl">Latest</div><div class="val" id="latVer">…</div></div>
-          <div class="k"><div class="lbl">Published</div><div class="val" id="pub">…</div></div>
-          <div class="k"><div class="lbl">Channel</div><div class="val" id="chan">stable</div></div>
+          <div class="k"><div class="lbl">Current</div><div class="val" id="curVer">--</div></div>
+          <div class="k"><div class="lbl">Latest</div><div class="val" id="latVer">--</div></div>
+          <div class="k"><div class="lbl">Published</div><div class="val" id="pub">--</div></div>
+          <div class="k"><div class="lbl">Update Available</div><div class="val" id="avail">--</div></div>
         </div>
 
         <div class="actions">
+          <button class="primary" id="pingBtn">Ping</button>
           <button class="primary" id="checkBtn">Check</button>
-          <button id="downloadBtn" disabled>Download</button>
           <button id="installBtn" disabled>Install</button>
+          <button id="wipeInstallBtn" disabled>Wipe + Install</button>
         </div>
 
         <div class="bar"><div class="fill" id="fill"></div></div>
@@ -109,7 +137,7 @@
       <div class="card">
         <div class="row">
           <h3>Release Notes</h3>
-          <div class="muted">live</div>
+          <div class="muted" id="notesLbl">live</div>
         </div>
         <div class="log" id="notes"></div>
       </div>
@@ -117,184 +145,135 @@
   </div>
 
 <script>
-  const el = (id) => document.getElementById(id)
-  const logEl = el("log")
-  const notesEl = el("notes")
-  const fillEl = el("fill")
-  const statusPill = el("statusPill")
+  const el = (id) => document.getElementById(id);
 
-  const checkBtn = el("checkBtn")
-  const downloadBtn = el("downloadBtn")
-  const installBtn = el("installBtn")
+  const logEl = el("log");
+  const notesEl = el("notes");
+  const fillEl = el("fill");
+  const statusPill = el("statusPill");
 
-  const curVerEl = el("curVer")
-  const latVerEl = el("latVer")
-  const pubEl = el("pub")
-  const chanEl = el("chan")
+  const pingBtn = el("pingBtn");
+  const checkBtn = el("checkBtn");
+  const installBtn = el("installBtn");
+  const wipeInstallBtn = el("wipeInstallBtn");
 
-  const qs = new URLSearchParams(location.search)
-  const channel = (qs.get("channel") || "stable").toLowerCase()
-  chanEl.textContent = channel
+  const curVerEl = el("curVer");
+  const latVerEl = el("latVer");
+  const pubEl = el("pub");
+  const availEl = el("avail");
 
-  const server = qs.get("server") || "http://localhost:3300"
-  el("serverLbl").textContent = server
+  const serverLbl = el("serverLbl");
+  const serverInput = el("serverInput");
+  const channelInput = el("channelInput");
+  const currentInput = el("currentInput");
+  const destInput = el("destInput");
+
+  const qs = new URLSearchParams(location.search);
 
   function wlog(s){
-    const t = new Date().toLocaleTimeString()
-    logEl.textContent += `[${t}] ${s}\n`
-    logEl.scrollTop = logEl.scrollHeight
+    const t = new Date().toLocaleTimeString();
+    logEl.textContent += `[${t}] ${s}\n`;
+    logEl.scrollTop = logEl.scrollHeight;
   }
 
   function setFill(p){
-    const v = Math.max(0, Math.min(100, Number(p) || 0))
-    fillEl.style.width = v + "%"
+    const v = Math.max(0, Math.min(100, Number(p) || 0));
+    fillEl.style.width = v + "%";
   }
 
   function setStatus(text){
-    statusPill.textContent = text
+    statusPill.textContent = text;
   }
 
-  async function post(path, body){
-    const r = await fetch(server + path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body || {})
-    })
-    if (!r.ok) throw new Error(path + " failed: " + r.status)
-    return r.json().catch(() => ({}))
+  function getCfg(){
+    const server = (serverInput.value || "").trim().replace(/\/+$/, "");
+    const channel = (channelInput.value || "").trim().toLowerCase() || "stable";
+    const current = (currentInput.value || "").trim() || "unknown";
+    const dest = (destInput.value || "").trim() || "current";
+    return { server, channel, current, dest };
   }
 
-  async function push(event, data){
-    try{
-      await post("/v1/updates/report", {
-        event,
-        data: data || {},
-        ts: Date.now(),
-        page: location.href,
-        channel
-      })
-    }catch{}
+  async function fetchJson(url){
+    const res = await fetch(url, { cache: "no-store" });
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    const txt = await res.text();
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${txt.slice(0,140)}`);
+    if (!ct.includes("application/json")) throw new Error(`Expected JSON, got ${ct || "unknown"}: ${txt.slice(0,140)}`);
+
+    return JSON.parse(txt);
   }
 
-  function openStream(){
-    try{
-      const url = server + "/v1/updates/stream?channel=" + encodeURIComponent(channel) + "&t=" + Date.now()
-      const es = new EventSource(url)
-
-      es.addEventListener("log", (e) => {
-        const msg = safeParse(e.data)
-        if (msg && msg.text) wlog(msg.text)
-      })
-
-      es.addEventListener("progress", (e) => {
-        const msg = safeParse(e.data)
-        if (msg && typeof msg.percent === "number") setFill(msg.percent)
-      })
-
-      es.addEventListener("state", (e) => {
-        const msg = safeParse(e.data)
-        if (msg && msg.status) setStatus(msg.status)
-        if (msg && msg.latest) latVerEl.textContent = msg.latest
-        if (msg && msg.published) pubEl.textContent = msg.published
-        if (msg && msg.notes != null) notesEl.textContent = msg.notes
-        if (msg && typeof msg.updateAvailable === "boolean"){
-          downloadBtn.disabled = !msg.updateAvailable
-          installBtn.disabled = !msg.updateAvailable
-        }
-      })
-
-      es.onerror = () => {
-        wlog("Stream disconnected")
-      }
-
-      wlog("Stream connected")
-      return es
-    }catch(err){
-      wlog("Stream failed: " + (err?.message || String(err)))
-      return null
-    }
+  function setButtons(updateAvailable){
+    const ok = !!updateAvailable;
+    installBtn.disabled = !ok;
+    wipeInstallBtn.disabled = !ok;
   }
 
-  function safeParse(s){
-    try{ return JSON.parse(s) }catch{ return null }
-  }
+  async function ping(){
+    const { server } = getCfg();
+    setStatus("Pinging…");
+    setFill(15);
 
-  async function getCurrentVersion(){
-    return qs.get("current") || "unknown"
+    wlog(`GET ${server}/health`);
+    const data = await fetchJson(server + "/health");
+
+    setFill(100);
+    setStatus("Online");
+    wlog(`OK: ${data.service} @ ${data.port}`);
+    return data;
   }
 
   async function check(){
-    setFill(10)
-    setStatus("Checking…")
-    downloadBtn.disabled = true
-    installBtn.disabled = true
+    const { server, channel, current } = getCfg();
+    setStatus("Checking…");
+    setButtons(false);
+    setFill(10);
 
-    const current = await getCurrentVersion()
-    curVerEl.textContent = current
+    curVerEl.textContent = current;
 
-    wlog("POST /v1/updates/check")
-    await push("ui_check_clicked", { current })
+    const url = `${server}/v2/updates/check?channel=${encodeURIComponent(channel)}&current=${encodeURIComponent(current)}`;
+    wlog("GET " + url);
 
-    const res = await post("/v1/updates/check", { channel, current })
-    setFill(45)
+    const res = await fetchJson(url);
+    setFill(70);
 
-    if (res.current) curVerEl.textContent = res.current
-    if (res.latest) latVerEl.textContent = res.latest
-    if (res.published) pubEl.textContent = res.published
-    if (res.notes != null) notesEl.textContent = res.notes
-    setStatus(res.status || (res.updateAvailable ? "Update available" : "Up to date"))
+    latVerEl.textContent = res.latest ?? "--";
+    pubEl.textContent = res.published ?? "--";
+    notesEl.textContent = res.notes ?? "";
+    availEl.textContent = String(!!res.updateAvailable);
 
-    downloadBtn.disabled = !res.updateAvailable
-    installBtn.disabled = !res.updateAvailable
+    setButtons(!!res.updateAvailable);
 
-    setFill(100)
-    wlog("Check done")
-    await push("check_result", res)
+    setStatus(res.status || (res.updateAvailable ? "Update available" : "Up to date"));
+    setFill(100);
+    wlog("Check done.");
+    return res;
   }
 
-  async function download(){
-    setStatus("Downloading…")
-    setFill(5)
-    wlog("POST /v1/updates/download")
-    await push("ui_download_clicked", { latest: latVerEl.textContent })
+  async function install(wipe){
+    const { server, channel, dest } = getCfg();
+    setStatus(wipe ? "Wipe + Installing…" : "Installing…");
+    setFill(15);
 
-    const res = await post("/v1/updates/download", { channel, version: latVerEl.textContent })
-    wlog(res.message || "Download started")
-    await push("download_started", res)
+    const url =
+      `${server}/v2/updates/install?channel=${encodeURIComponent(channel)}&dest=${encodeURIComponent(dest)}&wipe=${wipe ? "1" : "0"}`;
+
+    wlog("GET " + url);
+    const res = await fetchJson(url);
+
+    setFill(100);
+    if (res.ok) {
+      setStatus("Installed");
+      wlog(`Installed ${res.latest || ""} to ${res.installed_to}`);
+      wlog(`Entries extracted: ${res.entries}`);
+    } else {
+      setStatus("Failed");
+      wlog("Install failed: " + (res.error || "unknown"));
+    }
+    return res;
   }
 
-  async function install(){
-    setStatus("Installing…")
-    wlog("POST /v1/updates/install")
-    await push("ui_install_clicked", { latest: latVerEl.textContent })
-
-    const res = await post("/v1/updates/install", { channel, version: latVerEl.textContent })
-    wlog(res.message || "Install started")
-    await push("install_started", res)
-  }
-
-  checkBtn.onclick = () => check().catch(e => {
-    setStatus("Failed")
-    setFill(100)
-    wlog(e?.message || String(e))
-    push("check_failed", { error: e?.message || String(e) })
-  })
-
-  downloadBtn.onclick = () => download().catch(e => {
-    setStatus("Failed")
-    wlog(e?.message || String(e))
-    push("download_failed", { error: e?.message || String(e) })
-  })
-
-  installBtn.onclick = () => install().catch(e => {
-    setStatus("Failed")
-    wlog(e?.message || String(e))
-    push("install_failed", { error: e?.message || String(e) })
-  })
-
-  push("page_loaded", { ua: navigator.userAgent }).catch(()=>{})
-  openStream()
-  check().catch(e => { wlog(e?.message || String(e)) })
-</script>
-</body>
-</html>
+  // Defaults
+  const defaultServer = (qs.get("server") || "http://localhost:8787").replace(/\/+$/, "");
+  const defaultChannel = (qs.get("channel
