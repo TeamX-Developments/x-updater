@@ -24,7 +24,7 @@
         radial-gradient(900px 700px at 80% 70%, rgba(167,139,250,.16), transparent 55%),
         linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
     }
-    code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+    code, pre{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
     .wrap{max-width:1100px;margin:0 auto;padding:20px}
     .top{
       display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
@@ -59,6 +59,7 @@
       border-radius:18px;padding:14px;box-shadow:0 20px 50px rgba(0,0,0,.28);backdrop-filter:blur(10px)
     }
     h3{margin:0;font-size:14px;font-weight:950;opacity:.95}
+    .muted{color:var(--mut);font-size:12px}
     label{display:block;color:var(--mut);font-size:11px;margin:10px 0 6px}
     input{
       width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--bd);
@@ -90,11 +91,27 @@
       margin-top:12px;border:1px solid var(--bd);background:rgba(0,0,0,.18);border-radius:14px;padding:12px;
       height:250px;overflow:auto;font-size:12px;line-height:1.45;white-space:pre-wrap
     }
-    .warnbox{
-      margin-top:10px;border:1px solid rgba(245,158,11,.35);
-      background:rgba(245,158,11,.08);
-      border-radius:14px;padding:10px;font-size:12px;color:rgba(255,255,255,.86)
+    details{
+      margin-top:12px;border:1px solid var(--bd);background:rgba(255,255,255,.04);
+      border-radius:14px;padding:10px
     }
+    summary{cursor:pointer;font-weight:950;list-style:none}
+    summary::-webkit-details-marker{display:none}
+    .supportGrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+    .supportBox{
+      border:1px solid var(--bd);background:rgba(0,0,0,.14);border-radius:12px;padding:10px
+    }
+    .supportBox h4{margin:0 0 6px 0;font-size:12px;font-weight:950}
+    .supportBox ul{margin:8px 0 0 18px;padding:0;color:rgba(255,255,255,.86);font-size:12px;line-height:1.5}
+    .toast{
+      position:fixed;right:16px;bottom:16px;max-width:360px;
+      border:1px solid var(--bd);background:rgba(0,0,0,.55);backdrop-filter:blur(10px);
+      border-radius:14px;padding:10px 12px;font-size:12px;color:rgba(255,255,255,.9);
+      box-shadow:0 18px 40px rgba(0,0,0,.45);
+      opacity:0;transform:translateY(6px);pointer-events:none;
+      transition:opacity .18s ease,transform .18s ease;
+    }
+    .toast.show{opacity:1;transform:translateY(0)}
   </style>
 </head>
 <body>
@@ -105,8 +122,7 @@
         <div>
           <div class="title">Project X Updater</div>
           <div class="sub">
-            Uses <code>localhost:8787</code> and installs into <code>./app</code> via
-            <code>apply=1&target=app</code>. Then restarts the app.
+            Server: <code>localhost:8787</code> • Install applies to <code>./app</code> (server folder) then restarts.
           </div>
         </div>
       </div>
@@ -134,14 +150,9 @@
             <input id="currentInput" placeholder="1.0.0" />
           </div>
           <div>
-            <label>Install dest (staging)</label>
+            <label>Staging dest</label>
             <input id="destInput" placeholder="current" />
           </div>
-        </div>
-
-        <div class="warnbox">
-          Install flow: unzip to <code>./installed/&lt;dest&gt;</code> then overwrite <code>./app</code>.
-          If you point <code>target</code> at the wrong folder, you will overwrite the wrong folder. This is not a feature.
         </div>
 
         <div class="meta">
@@ -160,6 +171,44 @@
 
         <div class="bar"><div class="fill" id="fill"></div></div>
         <div class="log" id="log"></div>
+
+        <!-- SUPPORT -->
+        <details id="supportPanel">
+          <summary>Support</summary>
+          <div class="supportGrid">
+            <div class="supportBox">
+              <h4>Quick actions</h4>
+              <div class="actions" style="margin-top:8px">
+                <button id="copyDiagBtn">Copy diagnostics</button>
+                <button id="downloadLogBtn">Download logs</button>
+                <button class="danger" id="resetUiBtn">Reset UI</button>
+              </div>
+              <div class="muted" style="margin-top:8px">
+                If you’re going to ask for help, paste the diagnostics. Otherwise it’s just interpretive whining.
+              </div>
+            </div>
+
+            <div class="supportBox">
+              <h4>Troubleshooting checklist</h4>
+              <ul>
+                <li>Is the updates server running? Try <code>Ping</code> (hits <code>/health</code>).</li>
+                <li>If you see <code>&lt;!doctype html&gt;</code> in errors, you hit the wrong port or wrong route.</li>
+                <li>Make sure the server implements install apply: <code>apply=1&amp;target=app</code>.</li>
+                <li>Make sure the update zip exists and your channel entry in <code>updates.json</code> points to it.</li>
+                <li>If install worked but app looks unchanged, you probably applied to the wrong folder.</li>
+              </ul>
+            </div>
+
+            <div class="supportBox">
+              <h4>What this page does</h4>
+              <div class="muted">
+                Check: <code>/v2/updates/check</code><br>
+                Install: <code>/v2/updates/install</code> with <code>apply=1&amp;target=app</code><br>
+                Restart: calls <code>window.px.restartApp()</code> (only works inside Electron)
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
 
       <div class="card">
@@ -171,6 +220,8 @@
       </div>
     </div>
   </div>
+
+  <div class="toast" id="toast"></div>
 
 <script>
   const el = (id) => document.getElementById(id);
@@ -198,7 +249,26 @@
   const currentInput = el("currentInput");
   const destInput = el("destInput");
 
+  const copyDiagBtn = el("copyDiagBtn");
+  const downloadLogBtn = el("downloadLogBtn");
+  const resetUiBtn = el("resetUiBtn");
+  const toastEl = el("toast");
+
   const qs = new URLSearchParams(location.search);
+
+  // Support state
+  const supportState = {
+    lastError: null,
+    lastPing: null,
+    lastCheck: null,
+    lastInstall: null
+  };
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(() => toastEl.classList.remove("show"), 1600);
+  }
 
   function wlog(s){
     const t = new Date().toLocaleTimeString();
@@ -258,6 +328,9 @@
 
     const data = await fetchJson(url);
 
+    supportState.lastPing = data;
+    supportState.lastError = null;
+
     setServerState("ok");
     setStatus("Online");
     setFill(100);
@@ -277,6 +350,9 @@
     wlog("GET " + url);
 
     const res = await fetchJson(url);
+
+    supportState.lastCheck = res;
+    supportState.lastError = null;
 
     latVerEl.textContent = res.latest ?? "--";
     pubEl.textContent = res.published ?? "--";
@@ -300,7 +376,7 @@
     installBtn.disabled = true;
     wipeInstallBtn.disabled = true;
 
-    // IMPORTANT: apply to ./app (relative to updates server file)
+    // Apply to ./app (relative to updates server folder)
     const url =
       `${server}/v2/updates/install?channel=${encodeURIComponent(channel)}` +
       `&dest=${encodeURIComponent(dest)}` +
@@ -311,6 +387,9 @@
 
     const res = await fetchJson(url);
 
+    supportState.lastInstall = res;
+    supportState.lastError = null;
+
     setFill(100);
 
     if (res.ok) {
@@ -319,14 +398,12 @@
       if (res.applied) wlog(`Applied to: ${res.applied_to || "app"}`);
       wlog(`Entries extracted: ${res.entries}`);
 
-      // Restart app (Electron only)
       if (window.px && typeof window.px.restartApp === "function") {
         setStatus("Restarting…");
         wlog("Restart requested.");
         setTimeout(() => window.px.restartApp(), 800);
       } else {
         wlog("Restart not available (not running inside Electron).");
-        // allow manual re-check
         setButtons(true);
       }
     } else {
@@ -338,11 +415,87 @@
     return res;
   }
 
-  function fail(msg){
+  function fail(err){
+    const msg = err?.message || String(err);
+    supportState.lastError = msg;
+
     setServerState("bad");
     setStatus("Offline / Failed");
     setFill(100);
     wlog(msg);
+  }
+
+  function buildDiagnostics(){
+    const { server, channel, current, dest } = getCfg();
+    const diag = {
+      time: new Date().toISOString(),
+      location: location.href,
+      userAgent: navigator.userAgent,
+      config: { server, channel, current, stagingDest: dest, applyTarget: "app", apply: true },
+      ui: {
+        status: statusPill.textContent,
+        serverDot: srvDot.className,
+        currentShown: curVerEl.textContent,
+        latestShown: latVerEl.textContent,
+        publishedShown: pubEl.textContent,
+        updateAvailableShown: availEl.textContent
+      },
+      lastPing: supportState.lastPing,
+      lastCheck: supportState.lastCheck,
+      lastInstall: supportState.lastInstall,
+      lastError: supportState.lastError
+    };
+    return diag;
+  }
+
+  async function copyDiagnostics(){
+    const diag = buildDiagnostics();
+    const text = JSON.stringify(diag, null, 2);
+    try{
+      await navigator.clipboard.writeText(text);
+      toast("Diagnostics copied");
+    }catch{
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      toast("Diagnostics copied (fallback)");
+    }
+  }
+
+  function downloadLogs(){
+    const diag = buildDiagnostics();
+    const content =
+      "=== Project X Updater Log ===\n\n" +
+      "Diagnostics:\n" + JSON.stringify(diag, null, 2) + "\n\n" +
+      "Log:\n" + logEl.textContent + "\n";
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "updater-log.txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+    toast("Downloaded logs");
+  }
+
+  function resetUi(){
+    logEl.textContent = "";
+    notesEl.textContent = "";
+    setFill(0);
+    setButtons(false);
+    setServerState("warn");
+    setStatus("reset");
+    supportState.lastError = null;
+    supportState.lastPing = null;
+    supportState.lastCheck = null;
+    supportState.lastInstall = null;
+    toast("UI reset");
   }
 
   // Defaults from query params
@@ -354,11 +507,15 @@
   updateServerLabel();
   serverInput.addEventListener("input", updateServerLabel);
 
-  pingBtn.onclick = () => ping().catch(e => fail(e?.message || String(e)));
-  checkBtn.onclick = () => check().catch(e => { setStatus("Failed"); setFill(100); wlog(e?.message || String(e)); });
+  pingBtn.onclick = () => ping().catch(fail);
+  checkBtn.onclick = () => check().catch(err => { setStatus("Failed"); setFill(100); fail(err); });
 
-  installBtn.onclick = () => install(false).catch(e => { setStatus("Failed"); setFill(100); wlog(e?.message || String(e)); setButtons(true); });
-  wipeInstallBtn.onclick = () => install(true).catch(e => { setStatus("Failed"); setFill(100); wlog(e?.message || String(e)); setButtons(true); });
+  installBtn.onclick = () => install(false).catch(err => { setStatus("Failed"); setFill(100); fail(err); setButtons(true); });
+  wipeInstallBtn.onclick = () => install(true).catch(err => { setStatus("Failed"); setFill(100); fail(err); setButtons(true); });
+
+  copyDiagBtn.onclick = () => copyDiagnostics();
+  downloadLogBtn.onclick = () => downloadLogs();
+  resetUiBtn.onclick = () => resetUi();
 
   (async () => {
     wlog("Updater loaded.");
@@ -367,7 +524,7 @@
       await ping();
       await check();
     } catch (e) {
-      fail(e?.message || String(e));
+      fail(e);
     }
   })();
 </script>
